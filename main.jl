@@ -35,7 +35,24 @@ hmm_guess = hmms.HMM(init_guess, trans_guess, dists_guess)
 hmm_est, llh_evolution = hmms.baum_welch(hmm_guess,data_restricted.gold_price_usd_diff)
 
 println("done")
-#plot hmm characterizations
 
 
+#use viterbi to characterize most likely states with solved model
 
+colors = ["green", "yellow", "red"]
+labels = ["Low", "Mid", "High"]
+
+best_state_seq, _ = hmms.viterbi(hmm_est,data_restricted.gold_price_usd_diff)
+plt_viterbi = plt.scatter([],[])
+pop!(plt_viterbi.series_list)
+for i=1:3
+    inds = findall(x -> x==i, best_state_seq)
+    x = data_restricted.datetime[inds]
+    # @show x = Dates.value.(x-Dates.Date(2008,1,1))
+    y = data_restricted.gold_price_usd_diff[inds]
+    plt.scatter!(x,y,color=colors[i],label=labels[i])
+
+end
+display(plt_viterbi)
+
+plt.savefig("gold_fig.png")
