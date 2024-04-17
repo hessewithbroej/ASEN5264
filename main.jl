@@ -34,11 +34,7 @@ dists_guess = [dists.Normal(1,5), dists.Normal(1,10), dists.Normal(1,20)]
 hmm_guess = hmms.HMM(init_guess, trans_guess, dists_guess)
 hmm_est, llh_evolution = hmms.baum_welch(hmm_guess,data_restricted.gold_price_usd_diff)
 
-println("done")
-
-
 #use viterbi to characterize most likely states with solved model
-
 colors = ["green", "yellow", "red"]
 labels = ["Low", "Mid", "High"]
 
