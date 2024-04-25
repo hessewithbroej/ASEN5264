@@ -4,6 +4,8 @@ import DataFrames as DF
 import Random
 import Distributions as dists
 import XLSX
+import Statistics
+import Plots as plt
 
 #get all subject data into one dataframe
 function merge_data(workbooks::Vector{String},features::Vector{Tuple{String,Int}})
@@ -139,12 +141,19 @@ function estimate_transitions(states::Vector{Float64},data::DF.DataFrame)::Matri
     end
 
     #normalize rows
-    return transitions ./ sum(transitions,dims=2)
+    transitions = transitions ./ sum(transitions,dims=2)
+    # #weird numerical imprecision bug, temporary workaround by rrounding then fixing the last entry
+    # transitions = round.(transitions,digits=4)
+    # for j=1:length(states)
+    #     transitions[j,length(states)] = round(1-sum(transitions[j,1:length(states)-1]),digits=4)
+    # end
+
+    return transitions
 
 end
 
 #generate observation distributions for each specifed state using the specified features/physio data
-function estimate_observations(states::Vector{Float64},features::Vector{Tuple{String,Int}},data::DF.DataFrame)::Vector{dists.FullNormal}
+function estimate_observations(states::Vector{Float64},features::Vector{Tuple{String,Int}},data::DF.DataFrame,flag_covariation::Bool)::Vector{dists.FullNormal}
     
     #validate states input
     if sort(states) != states
@@ -176,25 +185,55 @@ function estimate_observations(states::Vector{Float64},features::Vector{Tuple{St
 
     #to be returned
     obs_dists = Vector{dists.FullNormal}()
+    if flag_covariation
+        #generate a MvNormal distribution object for each trust state
+        for i=1:length(states)
+            
+            #subset data corresponding to this state
+            data_subset = data[data.StateIndex .== i, column_headers]
+            fit_data = zeros(Float64,length(column_headers)-1,DF.nrow(data_subset))
 
-    #generate a MvNormal distribution object for each trust state
-    for i=1:length(states)
-        
-        #subset data corresponding to this state
-        data_subset = data[data.StateIndex .== i, column_headers]
-        fit_data = zeros(Float64,length(column_headers)-1,DF.nrow(data_subset))
-
-        #shitty way to collect all the data into the form needed by fit_mle, but it works for now
-        for j=1:DF.nrow(data_subset)
-            for k=2:length(column_headers)           
-                fit_data[k-1,j] = data_subset[j,k]
+            #shitty way to collect all the data into the form needed by fit_mle, but it works for now
+            for j=1:DF.nrow(data_subset)
+                for k=2:length(column_headers)           
+                    fit_data[k-1,j] = data_subset[j,k]
+                end
             end
+
+            #use the Distributions.fit_mle command to execute the multivariate gaussian fit algorithm, save its results.
+            push!(obs_dists, dists.fit_mle(dists.MvNormal, fit_data))
         end
 
-        #use the Distributions.fit_mle command to execute the multivariate gaussian fit algorithm, save its results.
-        push!(obs_dists, dists.fit_mle(dists.MvNormal, fit_data))
+    #disallow covariance in the distributions
+    else
+        for i=1:length(states)
+            
+            #subset data corresponding to this state
+            data_subset = data[data.StateIndex .== i, column_headers]
+            fit_data = zeros(Float64,length(column_headers)-1,DF.nrow(data_subset))
+
+            #shitty way to collect all the data into the form needed by fit_mle, but it works for now
+            for j=1:DF.nrow(data_subset)
+                for k=2:length(column_headers)           
+                    fit_data[k-1,j] = data_subset[j,k]
+                end
+            end
+
+            mu = Vector{Float64}()
+            sigma = zeros(Float64,length(column_headers)-1,length(column_headers)-1)
+            #compute the univariate mean and stddev of each observation feature
+            for k=1:length(column_headers)-1
+                push!(mu,Statistics.mean(fit_data[k,:]))
+                sigma[k,k] = Statistics.std(fit_data[k,:])
+            end
+            
+            #use the Distributions.fit_mle command to execute the multivariate gaussian fit algorithm, save its results.
+            push!(obs_dists, dists.MvNormal(mu,sigma))
+        end
+
 
     end
+
 
     return obs_dists
 
@@ -209,7 +248,7 @@ function create_estimates(states::Vector{Float64},features::Vector{Tuple{String,
     transition_matrix = estimate_transitions(states,data)
 
     # #generate uni/multivariate gaussian observation distributions for each state using the specifed feature(s)
-    observation_distributions = estimate_observations(states, features, data)
+    observation_distributions = estimate_observations(states, features, data, false)
 
     return (transition_matrix,observation_distributions)
 
@@ -252,6 +291,51 @@ function thread_observations(data,features::Vector{Tuple{String,Int}})
 
     return obs_seq,seq_ends
 
+end
+
+
+function plot_observation_distributions(states::Vector{Float64},features::Vector{Tuple{String,Int}},data::DF.DataFrame)
+    #basic input validation
+    try
+        data.StateIndex
+    catch exc
+        if isa(exc, ArgumentError)
+            data = classify_states(states,data)
+        else
+            error(exc)
+        end
+    end
+    
+    column_headers = Vector{String}()
+    #reconfigure features into correct column names
+    for j=1:length(features)
+        push!(column_headers,features[j][1]*"_"*string(features[j][2]))
+    end
+
+    obs_dists = estimate_observations(states,features,data,true)
+
+    colors = ["red","orange","yellow","green"]
+
+    plot = plt.scatter([],[])
+    pop!(plot.series_list)
+    for i=1:length(states)
+
+        #subset data, just the ccurrent state
+        data_subset = data[data.StateIndex.==i,:]
+
+        #extract the two features to be plotted
+        #get the data in vectors
+        x = data_subset[:,column_headers[1]]
+        y = data_subset[:,column_headers[2]]
+
+        plt.scatter!(x,y,color=colors[i],markershape=:+,legend=false)
+
+        @show Statistics.mean(x)
+        #overlay fits
+        plt.scatter!([Statistics.mean(x)],[Statistics.mean(y)],color=colors[i],markershape=:star5, markersize=10,legend=false)
+
+    end
+    display(plot)
 end
 
 end
