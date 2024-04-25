@@ -2,6 +2,61 @@ import CSV
 import DataFrames as DF
 import Random
 import Distributions as dists
+import XLSX
+
+#get all subject data into one dataframe
+function merge_data(workbooks::Vector{String},features::Vector{Tuple{String,Int}})
+    #workbooks: string array of absolute filepaths to data xlsxs
+    #features: vector of tuples corresponding to features of interest
+        # eg features = [("ECG_RMSSD",2)] would get the second column of the sheet "ECG_RMSSD"
+
+
+    #get the trust data from all the workbooks' first sheet
+    labels = Vector{String}()
+    trusts = Vector{Float64}()
+    for i=1:length(workbooks)
+
+        trust = DF.DataFrame(XLSX.readtable(workbooks[1],1)).Trust
+        @show trust
+        append!(trusts,trust)
+        tmp = repeat(["S$(i)"], length(trust))
+        append!(labels,tmp)
+
+    end
+    #construct initial dataframe with session Ids and trust values. 
+    data = DF.DataFrame(SessionID=labels,Trust=trusts)
+
+    #get specified features from all the workbooks and add them to dataframe 
+    tmp_data = []
+    for j=1:length(features)
+
+        tmp_data = Vector{Any}()
+        for i=1:length(workbooks)
+
+
+            # @show xf = XLSX.readxlsx(workbooks[i])
+            # @show column = xf[features[j][1]][:,features[j][2]]
+
+            append!(tmp_data,DF.DataFrame(XLSX.readtable(workbooks[i],features[j][1]))[:,features[j][2]])
+            
+            
+        end
+        data.tmp = tmp_data
+        DF.rename!(data,:tmp => features[j][1]*"_"*string(features[j][2]) )
+        
+
+    end
+
+   
+    return data
+
+end
+
+
+xx = merge_data(["C:/Users/hesse/Desktop/Code/ASEN5264/AFP31/AFP31_S1_Features.xlsx","C:/Users/hesse/Desktop/Code/ASEN5264/AFP31/AFP31_S2_Features.xlsx"], [("ECG_RMSSD",2)])
+@show xx
+
+
 
 #categorize data into user-specified states based on "Trust" variable
 function classify_states(states::Vector{Float64},data::DF.DataFrame)::DF.DataFrame
@@ -136,17 +191,17 @@ function estimate_observations(states::Vector{Float64},features::Vector{Symbol},
 end
 
 #some example data
-data = DF.DataFrame(CSV.File("C:/Users/hesse/Desktop/Code/ASEN5264/ExData.csv"))
-@show data
+# data = DF.DataFrame(CSV.File("C:/Users/hesse/Desktop/Code/ASEN5264/ExData.csv"))
+# @show data
 
-#trust thresholds for new states. In this example, there are two states, one where 0 <= trust < 0.5, and one where 0.5 <= trust.
-states = [0.0, 0.5]
+# #trust thresholds for new states. In this example, there are two states, one where 0 <= trust < 0.5, and one where 0.5 <= trust.
+# states = [0.0, 0.5]
 
-#these should be the a list of symbols matching the column headers in whatever excel sheet you're reading from
-features = [:HR_bl_diff, :Rsp_Amp_bl_diff]
+# #these should be the a list of symbols matching the column headers in whatever excel sheet you're reading from
+# features = [:HR_bl_diff, :Rsp_Amp_bl_diff]
 
-#generate the transition matrix estimate based on the provided trust discretization
-transition_matrix = estimate_transitions(states,data)
+# #generate the transition matrix estimate based on the provided trust discretization
+# transition_matrix = estimate_transitions(states,data)
 
-#generate uni/multivariate gaussian observation distributions for each state using the specifed feature(s)
-observation_distributions = estimate_observations(states, features, data)
+# #generate uni/multivariate gaussian observation distributions for each state using the specifed feature(s)
+# observation_distributions = estimate_observations(states, features, data)
