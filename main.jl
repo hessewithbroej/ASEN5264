@@ -13,7 +13,8 @@ import Plots as plt
 states = [0.0, 0.5]
 
 #these should be tuples of sheet name and column number for the feature you want to use
-# features = [("ECG_SDNN",5), ("RSP_RR",5)]
+features = [ ("RSP_RR",5)]
+# features = [("ECG_SDNN",5), ("EDA_NumSCRs",3), ("EDA_PhasicMax",5), ("RSP_MV",5), ("RSP_MV",7), ("RSP_RR",5)]
 
 data_files = ["C:/Users/hesse/Desktop/Code/ASEN5264/AFP31/AFP31_S1_Features.xlsx","C:/Users/hesse/Desktop/Code/ASEN5264/AFP31/AFP31_S2_Features.xlsx","C:/Users/hesse/Desktop/Code/ASEN5264/AFP31/AFP31_S3_Features.xlsx","C:/Users/hesse/Desktop/Code/ASEN5264/AFP31/AFP31_S4_Features.xlsx"]
 
@@ -24,20 +25,34 @@ init_guess = [0.5, 0.5]
 
 hmm_guess = hmms.HMM(init_guess, trans_guess, dists_guess)
 
-obs_seqs = hf.thread_observations(data_files,features)
+obs_seq,seq_ends = hf.thread_observations(data_files,features)
 
-@show hmm_est, llh_evolution = hmms.baum_welch(hmm_guess,obs_seq)
+@show hmm_est, llh_evolution = hmms.baum_welch(hmm_guess,obs_seq;seq_ends)
 
-colors = ["green", "red"]
+colors = ["red", "green"]
 labels = ["Low", "High"]
+shapes = [:circle, :square, :diamond, :cross]
 
-best_state_seq, _ = hmms.viterbi(hmm_est,obs_seq)
+best_state_seq, _ = hmms.viterbi(hmm_est,obs_seq;seq_ends)
+tmp = [i for i in 1:DF.nrow(data)]
+
+best_seqs = Vector{Vector{Int64}}()
+#deconcatenate sequences
+for i=1:length(seq_ends)
+    start,stop = hmms.seq_limits(seq_ends,i)
+    push!(best_seqs,best_state_seq[start:stop])
+end
+
 plt_viterbi = plt.scatter([],[])
 pop!(plt_viterbi.series_list)
-for i=1:2
-    inds = findall(x -> x==i, best_state_seq)
-    y = data.Trust[inds]
-    plt.scatter!(y,color=colors[i],label=labels[i])
+for j=1:length(unique(data.SessionID))
+    data_subset = data[data.SessionID.=="S$(j)",:]
+    for i=1:2
+        inds = findall(x -> x==i, best_seqs[j])
+        x = tmp[inds]
+        y = data_subset.Trust[inds]
+        plt.scatter!(x,y,color=colors[i],label=labels[i],markershape=shapes[j])
 
+    end
 end
 display(plt_viterbi)

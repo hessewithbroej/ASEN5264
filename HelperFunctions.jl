@@ -17,7 +17,7 @@ function merge_data(workbooks::Vector{String},features::Vector{Tuple{String,Int}
     trusts = Vector{Float64}()
     for i=1:length(workbooks)
 
-        trust = DF.DataFrame(XLSX.readtable(workbooks[1],1)).Trust
+        trust = DF.DataFrame(XLSX.readtable(workbooks[i],1)).Trust
         append!(trusts,trust)
         tmp = repeat(["S$(i)"], length(trust))
         append!(labels,tmp)
@@ -230,13 +230,16 @@ function thread_observations(data,features::Vector{Tuple{String,Int}})
         push!(column_headers,features[j][1]*"_"*string(features[j][2]))
     end
 
-    #thread observations for use in HMM.baum_welch
-    obs_seqs = Vector{Vector{Float64}}[]
-    for k=1:4
+    num_studies = unique(data.SessionID)
+    #thread observations for use in HMM.baum_welch. Note where new sequences begin.
+    obs_seq = Vector{Vector{Float64}}()
+    seq_ends = Vector{Int64}()
+    ind = 0
+    for k=1:length(num_studies)
         curr_tag = "S"*string(k)
         data_subset = data[data.SessionID .== curr_tag,:]
-        obs_seq = Vector{Float64}[]
         for i=1:DF.nrow(data_subset)
+            ind += 1
             tmp = Vector{Any}()
             for j=1:length(column_headers)
                 col = column_headers[j]
@@ -244,10 +247,10 @@ function thread_observations(data,features::Vector{Tuple{String,Int}})
             end
             push!(obs_seq, tmp)
         end
-        push!(obs_seqs,obs_seq)
+        push!(seq_ends,ind)
     end
 
-    return obs_seqs
+    return obs_seq,seq_ends
 
 end
 
