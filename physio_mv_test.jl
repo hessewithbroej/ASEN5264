@@ -24,7 +24,6 @@ dists_guess = [dists.MvNormal([15,0],[5 0; 0 1]), dists.MvNormal([5, 0],[2 0; 0 
 
 hmm_guess = hmms.HMM(init_guess, trans_guess, dists_guess)
 
-
 #thread observations
 obs_seq = Vector{Float64}[]
 for i=1:length(data.HR_bl_diff)
