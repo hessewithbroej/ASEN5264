@@ -79,7 +79,7 @@ function estimate_transitions(states::Vector{Float64},data::DF.DataFrame)::Matri
 
 end
 
-
+#generate observation distributions for each specifed state using the specified features/physio data
 function estimate_observations(states::Vector{Float64},features::Vector{Symbol},data::DF.DataFrame)::Vector{dists.FullNormal}
     
     #validate states input
@@ -118,11 +118,15 @@ function estimate_observations(states::Vector{Float64},features::Vector{Symbol},
         data_subset = data[data.StateIndex .== i, features]
 
         fit_data = zeros(Float64,length(features)-1,DF.nrow(data_subset))
+
+        #shitty way to collect all the data into the form needed by fit_mle, but it works for now
         for j=1:DF.nrow(data_subset)
             for k=1:length(features)-1           
                 fit_data[k,j] = data_subset[j,k]
             end
         end
+
+        #use the Distributions.fit_mle command to execute the multivariate gaussian fit algorithm, save its results.
         push!(obs_dists, dists.fit_mle(dists.MvNormal, fit_data))
 
     end
@@ -131,20 +135,18 @@ function estimate_observations(states::Vector{Float64},features::Vector{Symbol},
 
 end
 
-
+#some example data
 data = DF.DataFrame(CSV.File("C:/Users/hesse/Desktop/Code/ASEN5264/ExData.csv"))
 @show data
 
+#trust thresholds for new states. In this example, there are two states, one where 0 <= trust < 0.5, and one where 0.5 <= trust.
 states = [0.0, 0.5]
 
+#these should be the a list of symbols matching the column headers in whatever excel sheet you're reading from
+features = [:HR_bl_diff, :Rsp_Amp_bl_diff]
+
+#generate the transition matrix estimate based on the provided trust discretization
 transition_matrix = estimate_transitions(states,data)
-observation_distributions = estimate_observations(states, [:HR_bl_diff, :Rsp_Amp_bl_diff], data)
 
-
-# @show y = classify_states([0.0, 0.5], data)
-
-# @show x= estimate_transitions([0.0, 0.5],data)
-
-
-
-# estimate_observations([0.0,0.5],[:Trust,:HR_bl_diff],data)
+#generate uni/multivariate gaussian observation distributions for each state using the specifed feature(s)
+observation_distributions = estimate_observations(states, features, data)
