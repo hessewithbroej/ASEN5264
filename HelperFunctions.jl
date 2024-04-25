@@ -1,3 +1,4 @@
+module HelperFunctions
 import CSV
 import DataFrames as DF
 import Random
@@ -214,12 +215,34 @@ function create_estimates(states::Vector{Float64},features::Vector{Tuple{String,
 
 end
 
-#trust thresholds for new states. In this example, there are two states, one where 0 <= trust < 0.5, and one where 0.5 <= trust.
-states = [0.0, 0.5]
+# Convert observation data into sets of observation by timestep 
+# eg obs_seq = [[var1_time1, var2_time2], [var1_time2, var2_time2], ... []]
+function thread_observations(data,features::Vector{Tuple{String,Int}})
 
-#these should be tuples of sheet name and column number for the feature you want to use
-features = [("ECG_SDNN",5), ("RSP_RR",5)]
+    # generate dataframe if given a list of files
+    if isa(data,Vector{String})
+        data = merge_data(data,features)
+    end
 
-data = ["C:/Users/hesse/Desktop/Code/ASEN5264/AFP31/AFP31_S1_Features.xlsx","C:/Users/hesse/Desktop/Code/ASEN5264/AFP31/AFP31_S2_Features.xlsx"]
+    column_headers = Vector{String}()
+    #reconfigure features into correct column names
+    for j=1:length(features)
+        push!(column_headers,features[j][1]*"_"*string(features[j][2]))
+    end
 
-@show a,b = create_estimates(states,features,data)
+    #thread observations for use in HMM.baum_welch
+    obs_seq = Vector{Float64}[]
+    for i=1:DF.nrow(data)
+        tmp = Vector{Any}()
+        for j=1:length(column_headers)
+            col = column_headers[j]
+            push!(tmp,data[i,col])
+        end
+        push!(obs_seq, tmp)
+    end
+
+    return obs_seq
+
+end
+
+end

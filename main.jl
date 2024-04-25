@@ -1,54 +1,43 @@
-import HiddenMarkovModels as hmms
 import CSV
+import HiddenMarkovModels as hmms
 import DataFrames as DF
 import Random
 import Distributions as dists
+import XLSX
+include("HelperFunctions.jl")
+import .HelperFunctions as hf
 import Plots as plt
-import Dates
-
-Random.seed!(12321)
-
-#load data, add a differential column
-data = DF.DataFrame(CSV.File("C:/Users/hesse/Desktop/Code/ASEN5264/gold_price_usd.csv"))
-data.gold_price_usd_diff = [0; diff(data.gold_price_usd)]
-
-#data restrict to after to jan 1 2008
-after_date(date::Dates.Date) = date > Dates.Date(2008,1,1)
-data_restricted = filter(:datetime => after_date, data)
-
-#get data in differential form, supposedly easier to model
-# deleteat!(data_restricted, [1])
-# @show data_restricted
-
-#visualize raw data
-plt_raw = display(plt.plot(data_restricted.datetime, data_restricted.gold_price_usd))
-plt_raw_diff = display(plt.plot(data_restricted.datetime, data_restricted.gold_price_usd_diff))
 
 
+#trust thresholds for new states. In this example, there are two states, one where 0 <= trust < 0.5, and one where 0.5 <= trust.
+states = [0.0, 0.5]
 
-# #baum-welch attempt
-init_guess = [0.9, 0.05, 0.05]
-trans_guess = [0.8 0.15 0.05; 0.10 0.80 0.10; 0.05 0.1 0.85]
-dists_guess = [dists.Normal(1,5), dists.Normal(1,10), dists.Normal(1,20)]
+#these should be tuples of sheet name and column number for the feature you want to use
+# features = [("ECG_SDNN",5), ("RSP_RR",5)]
+
+data_files = ["C:/Users/hesse/Desktop/Code/ASEN5264/AFP31/AFP31_S1_Features.xlsx","C:/Users/hesse/Desktop/Code/ASEN5264/AFP31/AFP31_S2_Features.xlsx"]
+
+data = hf.merge_data(data_files,features)
+
+@show trans_guess,dists_guess = hf.create_estimates(states,features,data_files)
+init_guess = [0.5, 0.5]
 
 hmm_guess = hmms.HMM(init_guess, trans_guess, dists_guess)
-hmm_est, llh_evolution = hmms.baum_welch(hmm_guess,data_restricted.gold_price_usd_diff)
 
-#use viterbi to characterize most likely states with solved model
-colors = ["green", "yellow", "red"]
-labels = ["Low", "Mid", "High"]
+obs_seq = hf.thread_observations(data_files,features)
 
-best_state_seq, _ = hmms.viterbi(hmm_est,data_restricted.gold_price_usd_diff)
+@show hmm_est, llh_evolution = hmms.baum_welch(hmm_guess,obs_seq)
+
+colors = ["green", "red"]
+labels = ["Low", "High"]
+
+best_state_seq, _ = hmms.viterbi(hmm_est,obs_seq)
 plt_viterbi = plt.scatter([],[])
 pop!(plt_viterbi.series_list)
-for i=1:3
+for i=1:2
     inds = findall(x -> x==i, best_state_seq)
-    x = data_restricted.datetime[inds]
-    # @show x = Dates.value.(x-Dates.Date(2008,1,1))
-    y = data_restricted.gold_price_usd_diff[inds]
-    plt.scatter!(x,y,color=colors[i],label=labels[i])
+    y = data.Trust[inds]
+    plt.scatter!(y,color=colors[i],label=labels[i])
 
 end
 display(plt_viterbi)
-
-plt.savefig("gold_fig.png")
