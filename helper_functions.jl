@@ -173,8 +173,6 @@ function estimate_observations(states::Vector{Float64},features::Vector{Tuple{St
         push!(column_headers,features[j][1]*"_"*string(features[j][2]))
     end
 
-
-
     #to be returned
     obs_dists = Vector{dists.FullNormal}()
 
@@ -201,17 +199,17 @@ function estimate_observations(states::Vector{Float64},features::Vector{Tuple{St
 
 end
 
-#some example data
-data = merge_data(["C:/Users/hesse/Desktop/Code/ASEN5264/AFP31/AFP31_S1_Features.xlsx","C:/Users/hesse/Desktop/Code/ASEN5264/AFP31/AFP31_S2_Features.xlsx"], [("ECG_RMSSD",2)])
-
 #trust thresholds for new states. In this example, there are two states, one where 0 <= trust < 0.5, and one where 0.5 <= trust.
 states = [0.0, 0.5]
 
-#these should be the a list of symbols matching the column headers in whatever excel sheet you're reading from
-features = [("ECG_RMSSD",2)]
+#these should be tuples of sheet name and column number for the feature you want to use
+features = [("ECG_SDNN",5), ("RSP_RR",5)]
+
+#some example data
+data = merge_data(["C:/Users/hesse/Desktop/Code/ASEN5264/AFP31/AFP31_S1_Features.xlsx","C:/Users/hesse/Desktop/Code/ASEN5264/AFP31/AFP31_S2_Features.xlsx"],features)
 
 #generate the transition matrix estimate based on the provided trust discretization
 transition_matrix = estimate_transitions(states,data)
 
 # #generate uni/multivariate gaussian observation distributions for each state using the specifed feature(s)
-# observation_distributions = estimate_observations(states, features, data)
+observation_distributions = estimate_observations(states, features, data)
