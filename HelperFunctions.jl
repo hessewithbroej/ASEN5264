@@ -231,17 +231,23 @@ function thread_observations(data,features::Vector{Tuple{String,Int}})
     end
 
     #thread observations for use in HMM.baum_welch
-    obs_seq = Vector{Float64}[]
-    for i=1:DF.nrow(data)
-        tmp = Vector{Any}()
-        for j=1:length(column_headers)
-            col = column_headers[j]
-            push!(tmp,data[i,col])
+    obs_seqs = Vector{Vector{Float64}}[]
+    for k=1:4
+        curr_tag = "S"*string(k)
+        data_subset = data[data.SessionID .== curr_tag,:]
+        obs_seq = Vector{Float64}[]
+        for i=1:DF.nrow(data_subset)
+            tmp = Vector{Any}()
+            for j=1:length(column_headers)
+                col = column_headers[j]
+                push!(tmp,data_subset[i,col])
+            end
+            push!(obs_seq, tmp)
         end
-        push!(obs_seq, tmp)
+        push!(obs_seqs,obs_seq)
     end
 
-    return obs_seq
+    return obs_seqs
 
 end
 

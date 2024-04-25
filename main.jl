@@ -15,7 +15,7 @@ states = [0.0, 0.5]
 #these should be tuples of sheet name and column number for the feature you want to use
 # features = [("ECG_SDNN",5), ("RSP_RR",5)]
 
-data_files = ["C:/Users/hesse/Desktop/Code/ASEN5264/AFP31/AFP31_S1_Features.xlsx","C:/Users/hesse/Desktop/Code/ASEN5264/AFP31/AFP31_S2_Features.xlsx"]
+data_files = ["C:/Users/hesse/Desktop/Code/ASEN5264/AFP31/AFP31_S1_Features.xlsx","C:/Users/hesse/Desktop/Code/ASEN5264/AFP31/AFP31_S2_Features.xlsx","C:/Users/hesse/Desktop/Code/ASEN5264/AFP31/AFP31_S3_Features.xlsx","C:/Users/hesse/Desktop/Code/ASEN5264/AFP31/AFP31_S4_Features.xlsx"]
 
 data = hf.merge_data(data_files,features)
 
@@ -24,7 +24,7 @@ init_guess = [0.5, 0.5]
 
 hmm_guess = hmms.HMM(init_guess, trans_guess, dists_guess)
 
-obs_seq = hf.thread_observations(data_files,features)
+obs_seqs = hf.thread_observations(data_files,features)
 
 @show hmm_est, llh_evolution = hmms.baum_welch(hmm_guess,obs_seq)
 
