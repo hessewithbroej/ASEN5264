@@ -23,14 +23,12 @@ data_files = ["C:/Users/hesse/Desktop/Code/ASEN5264/FeaturesForModelsAFP31.xlsx"
 
 data = hf.merge_data(data_files,features)
 
-data_SA = hfn.setup_data_input(data_files,features)
-data_SA_x = hfn.get_predictor_data(data_SA)
-data_SA_y = hfn.get_predictee_data(data_SA)
+input_data,holdout_data = hfn.setup_data_input(data_files,features,0.15)
+input_data_x = hfn.get_predictor_data(input_data)
+input_data_y = hfn.get_predictee_data(input_data)
+holdout_data_x = hfn.get_predictor_data(holdout_data)
+holdout_data_y = hfn.get_predictee_data(holdout_data)
 
-
-# # data_SA_old = [(SVector(data.fNIRS_Vers4_71[i],data.fNIRS_Vers4_265[i]), SVector(data.Trust[i])) for i in 1:DF.nrow(data)]
-# # data_SA_x = [SVector(data.fNIRS_Vers4_71[i],data.fNIRS_Vers4_265[i]) for i in 1:DF.nrow(data)]
-# # data_SA_y = [SVector(data.Trust[i]) for i in 1:DF.nrow(data)]
 
 m = Chain(Dense(2, 50, relu), Dense(50, 50, relu), Dense(50, 1))
 loss(x, y) = sum((m(x)-y).^2)
@@ -38,29 +36,47 @@ loss(x, y) = sum((m(x)-y).^2)
 
 t = []
 learncurve = []
-num_episodes = 50000
+numcurve = []
+num_episodes = 100000
 
 for i in 1:num_episodes
-    Flux.train!(loss, Flux.params(m), data_SA, Descent(0.05))
+    Flux.train!(loss, Flux.params(m), input_data, Descent(0.05))
 
     if i%50 == 0
 
         println("Episode: $(i)")
-        hfn.visualize_classification_results(m,data_SA)
+        hfn.visualize_classification_results(m,input_data)
 
         #track learning curv
-        tot = 0
-        for j=1:length(data_SA)
-            tot+=  (m( data_SA_x[j] )[1] - data_SA_y[j][1])^2
+        tot_MSE = 0
+        correct_classifications = 0
+        for j=1:length(input_data)
+            tot_MSE +=  (m( input_data_x[j] )[1] - input_data_y[j][1])^2
+            correct_classifications += Int( abs.(m( input_data_x[j] )[1] - input_data_y[j][1])<=0.1)
         end
 
         push!(t,i)
-        push!(learncurve,  tot )
+        push!(learncurve,  tot_MSE )
+        push!(numcurve,  correct_classifications )
 
     end
 
 end
 
-@show learncurve
 
-display(plt.plot(t,learncurve, label="Problem 2 learn curve"))
+display(plt.plot(t,learncurve, label="MSE vs Episode"))
+display(plt.plot(t,numcurve, label="Correct Classifications vs Episode"))
+
+
+
+hfn.visualize_classification_results(m,holdout_data)
+
+global test_MSE = 0
+global test_ICs = 0
+for j=1:length(holdout_data)
+    global test_MSE +=  (m( holdout_data_x[j] )[1] - holdout_data_y[j][1])^2
+    global test_ICs += Int( abs.(m( holdout_data_x[j] )[1] - holdout_data_y[j][1]) <=0.1)
+end
+
+@show test_MSE
+@show test_ICs

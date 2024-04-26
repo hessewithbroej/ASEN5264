@@ -13,7 +13,7 @@ using StaticArrays
 
 
 #create input data for Flux
-function setup_data_input(data,features::Vector{Tuple{String,Int}})
+function setup_data_input(data,features::Vector{Tuple{String,Int}},holdout_prop::Float64)
     # generate dataframe if given a list of files
     if isa(data,Vector{String})
         data = hf.merge_data(data,features)
@@ -25,16 +25,29 @@ function setup_data_input(data,features::Vector{Tuple{String,Int}})
         push!(column_headers,features[j][1]*"_"*string(features[j][2]))
     end
 
+    shuffled_data = data[DF.shuffle(1:DF.nrow(data)),:]
+    test_data = shuffled_data[1:Int(floor(holdout_prop*DF.nrow(data))),:]
+    train_data = shuffled_data[1+Int(floor(holdout_prop*DF.nrow(data))):DF.nrow(data),:]
+
+
     input_data = Vector{Tuple{Vector{Float32},Vector{Float32}}}()
-    for i=1:DF.nrow(data)
+    for i=1:DF.nrow(train_data)
         tmp = Vector{Float32}()
         for j=1:length(column_headers)
-            push!(tmp,data[i,column_headers[j]])
+            push!(tmp,train_data[i,column_headers[j]])
         end
-        push!(input_data,(tmp,[data[i,"Trust"]]))
+        push!(input_data,(tmp,[train_data[i,"Trust"]]))
     end
 
-    return input_data
+    holdout_data = Vector{Tuple{Vector{Float32},Vector{Float32}}}()
+    for i=1:DF.nrow(test_data)
+        tmp = Vector{Float32}()
+        for j=1:length(column_headers)
+            push!(tmp,test_data[i,column_headers[j]])
+        end
+        push!(holdout_data,(tmp,[test_data[i,"Trust"]]))
+    end
+    return input_data,holdout_data
 
 end
 
