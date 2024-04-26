@@ -85,17 +85,46 @@ function visualize_classification_results(m,data)
 
     #color by whether predicted trust within 0.1 of actual trust
     colors = ifelse.( abs.(y_predicted_plot .- y_truth_plot).<=0.1 , "green","red")
-    labels = ifelse.( abs.(y_predicted_plot .- y_truth_plot).<=0.1 , "Correct Prediction","Incorrect Prediction")
+    labels = ifelse.( abs.(y_predicted_plot .- y_truth_plot).<=0.1 , "Correct","Incorrect")
 
 
     x = 1:length(y_truth_plot)
-    p = plt.scatter(x,y_truth_plot,color=colors)
+    p = plt.scatter(x,y_truth_plot,color=colors,label=labels)
 
     display(p)
 
     return p
 end
 
+function cummulative_classification_plot(m,data)
+
+    #get relevant data into an easier form to plot with
+    y_predicted = m.(get_predictor_data(data))
+    y_predicted_plot = [y_predicted[j][1] for j in 1:length(y_predicted)]
+    y_truth = get_predictee_data(data)
+    y_truth_plot = [y_truth[j][1] for j in 1:length(y_truth)]
+
+    #color by whether net correctly predicted high trust or low trust state
+    # colors = ifelse.( (y_predicted_plot.>=0.5 .&& y_truth_plot .>= 0.5) .|| (y_predicted_plot .< 0.5 .&& y_truth_plot .< 0.5) , "green","red")
+    # labels = ifelse.( (y_predicted_plot.>=0.5 .&& y_truth_plot .>= 0.5) .|| (y_predicted_plot .< 0.5 .&& y_truth_plot .< 0.5) , "Correct Prediction","Incorrect Prediction")
+
+    #
+    errors = sort(abs.(y_predicted_plot .- y_truth_plot))
+    error_cdf = Vector{Float64}()
+    x = 0:0.01:1
+    for i=1:length(x)
+
+        #count the proprtion of occurrences of errors <= current error
+        push!(error_cdf, length(findall( <=(x[i]), errors))/length(errors))
+
+    end
+
+    p = plt.plot(x,error_cdf,xlabel="Trust Prediction Error",ylabel="Cummulative Proportion")
+
+    return p
+
+
+end
 
 
 
