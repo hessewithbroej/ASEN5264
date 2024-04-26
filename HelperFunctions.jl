@@ -19,11 +19,19 @@ function merge_data(workbooks::Vector{String},features::Vector{Tuple{String,Int}
     trusts = Vector{Float64}()
     for i=1:length(workbooks)
 
+        m = match(r"AFP[0-9]+",workbooks[i])
+        
         trust = DF.DataFrame(XLSX.readtable(workbooks[i],1)).Trust
-        append!(trusts,trust)
-        tmp = repeat(["S$(i)"], length(trust))
-        append!(labels,tmp)
 
+        append!(trusts,trust)
+        tmp = repeat([m.match*"S$(1)"], Int(length(trust)/4))
+        append!(labels,tmp)
+        tmp = repeat([m.match*"S$(2)"], Int(length(trust)/4))
+        append!(labels,tmp)
+        tmp = repeat([m.match*"S$(3)"], Int(length(trust)/4))
+        append!(labels,tmp)
+        tmp = repeat([m.match*"S$(4)"], Int(length(trust)/4))
+        append!(labels,tmp)
     end
     #construct initial dataframe with session Ids and trust values. 
     data = DF.DataFrame(SessionID=labels,Trust=trusts)
@@ -269,14 +277,13 @@ function thread_observations(data,features::Vector{Tuple{String,Int}})
         push!(column_headers,features[j][1]*"_"*string(features[j][2]))
     end
 
-    num_studies = unique(data.SessionID)
+    studies = unique(data.SessionID)
     #thread observations for use in HMM.baum_welch. Note where new sequences begin.
     obs_seq = Vector{Vector{Float64}}()
     seq_ends = Vector{Int64}()
     ind = 0
-    for k=1:length(num_studies)
-        curr_tag = "S"*string(k)
-        data_subset = data[data.SessionID .== curr_tag,:]
+    for k=1:length(studies)
+        data_subset = data[data.SessionID .== studies[k],:]
         for i=1:DF.nrow(data_subset)
             ind += 1
             tmp = Vector{Any}()
@@ -314,7 +321,7 @@ function plot_observation_distributions(states::Vector{Float64},features::Vector
 
     obs_dists = estimate_observations(states,features,data,true)
 
-    colors = ["red","orange","yellow","green"]
+    colors = ["red","green","yellow","orange"]
 
     plot = plt.scatter([],[])
     pop!(plot.series_list)
@@ -330,7 +337,6 @@ function plot_observation_distributions(states::Vector{Float64},features::Vector
 
         plt.scatter!(x,y,color=colors[i],markershape=:+,legend=false)
 
-        @show Statistics.mean(x)
         #overlay fits
         plt.scatter!([Statistics.mean(x)],[Statistics.mean(y)],color=colors[i],markershape=:star5, markersize=10,legend=false)
 
