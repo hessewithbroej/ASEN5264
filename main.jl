@@ -10,12 +10,13 @@ import Plots as plt
 
 
 #trust thresholds for new states. In this example, there are two states, one where 0 <= trust < 0.5, and one where 0.5 <= trust.
-states = [0.0, 0.3]
+states = [0.0, 0.4]
 
 #these should be tuples of sheet name and column number for the feature you want to use
 # features = [("ECG_SDNN",5),("EDA_NumSCRs",3),("EDA_PhasicMax",5),("RSP_MV",5),("RSP_RR",5)]
 # features = [("ECG_SDNN",5), ("EDA_NumSCRs",3), ("EDA_PhasicMax",5), ("RSP_MV",5), ("RSP_MV",7), ("RSP_RR",5)]
-features = [("Features",3),("Features",22)]
+# features = [("Features",3),("Features",22)]   #71fNIRS_Vers4 265
+features = [("fNIRS_Vers4",71),("fNIRS_Vers4",265)]
 
 data_files = ["C:/Users/hesse/Desktop/Code/ASEN5264/FeaturesForModelsAFP31.xlsx"]
 
@@ -56,7 +57,7 @@ for j=1:length(studies)
     data_subset = data[data.SessionID.==studies[j],:]
     for i=1:length(states)
         inds = findall(x -> x==i, best_seqs[j])
-        x = tmp[inds]
+        x = tmp[inds].+(48*(j-1))
         y = data_subset.Trust[inds]
         plt.scatter!(x,y,color=colors[i],markershape=shapes[j],legend=false)
 
