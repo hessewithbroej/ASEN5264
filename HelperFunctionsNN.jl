@@ -89,7 +89,7 @@ function visualize_classification_results(m,data)
 
 
     x = 1:length(y_truth_plot)
-    p = plt.scatter(x,y_truth_plot,color=colors,label=labels)
+    p = plt.scatter(x,y_truth_plot,color=colors,xlabel="Green=prediction error <= 0.1", ylabel="Survey Trust")
 
     display(p)
 

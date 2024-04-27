@@ -85,11 +85,9 @@ hfn.visualize_classification_results(m,holdout_data)
 
 global test_MSE = 0
 global test_ICs = 0
-global test_ICs20 = 0
 for j=1:length(holdout_data)
     global test_MSE +=  (m( holdout_data_x[j] )[1] - holdout_data_y[j][1])^2
     global test_ICs += Int( abs.(m( holdout_data_x[j] )[1] - holdout_data_y[j][1]) <=0.1)
-    global test_ICs20 += Int( abs.(m( holdout_data_x[j] )[1] - holdout_data_y[j][1]) <=0.2)
 end
 
 @show test_MSE
