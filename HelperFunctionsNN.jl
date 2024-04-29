@@ -13,10 +13,16 @@ using StaticArrays
 
 
 #create input data for Flux
-function setup_data_input(data,features::Vector{Tuple{String,Int}},holdout_prop::Float64)
+function setup_data_input(data,features::Vector{Tuple{String,Int}},holdout_prop::Float64,flag_diff)
     # generate dataframe if given a list of files
     if isa(data,Vector{String})
         data = hf.merge_data(data,features)
+    end
+
+    # predict delta_trust rather than absolute trust
+    if flag_diff
+        data.Trust_diff = [diff(data.Trust); 0]
+        data.Trust = data.Trust_diff
     end
 
     column_headers = Vector{String}()
@@ -84,12 +90,13 @@ function visualize_classification_results(m,data)
     # labels = ifelse.( (y_predicted_plot.>=0.5 .&& y_truth_plot .>= 0.5) .|| (y_predicted_plot .< 0.5 .&& y_truth_plot .< 0.5) , "Correct Prediction","Incorrect Prediction")
 
     #color by whether predicted trust within 0.1 of actual trust
-    colors = ifelse.( abs.(y_predicted_plot .- y_truth_plot).<=0.1 , "green","red")
-    labels = ifelse.( abs.(y_predicted_plot .- y_truth_plot).<=0.1 , "Correct","Incorrect")
+    pred_error =  abs.(y_predicted_plot .- y_truth_plot)
+    colors = ifelse.( pred_error.<=0.1 , "green","red")
+    labels = ifelse.( pred_error.<=0.1 , "Correct","Incorrect")
 
 
     x = 1:length(y_truth_plot)
-    p = plt.scatter(x,y_truth_plot,color=colors,xlabel="Green=prediction error <= 0.1", ylabel="Survey Trust")
+    p = plt.scatter(pred_error,y_truth_plot,color=colors,xlabel="Prediction error", ylabel="Survey Trust")
 
     display(p)
 

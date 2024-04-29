@@ -20,20 +20,22 @@ using StaticArrays
 # features = [("Features",9),("Features",40),("Features",70),("Features",98),("Features",100),("Features",145),("fNIRS_Vers4",71),("fNIRS_Vers4",265)]
 
 #assorted FNIRs features (all hbo_mus)
-features = [("fNIRS_Vers4",1),("fNIRS_Vers4",2),("fNIRS_Vers4",3),("fNIRS_Vers4",4),("fNIRS_Vers4",5),("fNIRS_Vers4",6),("fNIRS_Vers4",7),("fNIRS_Vers4",8),("fNIRS_Vers4",9),("fNIRS_Vers4",10),("fNIRS_Vers4",11),("fNIRS_Vers4",12),("fNIRS_Vers4",13),("fNIRS_Vers4",14),("fNIRS_Vers4",15),("fNIRS_Vers4",16),("fNIRS_Vers4",17),("fNIRS_Vers4",18),("fNIRS_Vers4",19),("fNIRS_Vers4",20)]
+features_neuro = [("fNIRS_Vers4",1),("fNIRS_Vers4",2),("fNIRS_Vers4",3),("fNIRS_Vers4",4),("fNIRS_Vers4",5),("fNIRS_Vers4",6),("fNIRS_Vers4",7),("fNIRS_Vers4",8),("fNIRS_Vers4",9),("fNIRS_Vers4",10),("fNIRS_Vers4",11),("fNIRS_Vers4",12),("fNIRS_Vers4",13),("fNIRS_Vers4",14),("fNIRS_Vers4",15),("fNIRS_Vers4",16),("fNIRS_Vers4",17),("fNIRS_Vers4",18),("fNIRS_Vers4",19),("fNIRS_Vers4",20)]
 
+#version 4 of all physio features
+features_physio = [("Features",2),("Features",11),("Features",20),("Features",29), ("Features",38),("Features",47),("Features",56),("Features",65),("Features",74),("Features",83),("Features",92),("Features",101),("Features",110),("Features",119),("Features",128),("Features",137),("Features",146)]
 
+# features = append!(features_neuro,features_physio)
+features = features_neuro
 
+# data_files = ["C:/Users/hesse/Desktop/Code/ASEN5264/FeaturesForModelsAFP31.xlsx"]
 data_files = ["C:/Users/hesse/Desktop/Code/ASEN5264/FeaturesForModelsAFP28.xlsx","C:/Users/hesse/Desktop/Code/ASEN5264/FeaturesForModelsAFP30.xlsx","C:/Users/hesse/Desktop/Code/ASEN5264/FeaturesForModelsAFP31.xlsx","C:/Users/hesse/Desktop/Code/ASEN5264/FeaturesForModelsAFP32.xlsx"]
-
-# data_files = ["C:/Users/hesse/Desktop/Code/ASEN5264/AFP30/AFP30_S1_Features.xlsx","C:/Users/hesse/Desktop/Code/ASEN5264/AFP30/AFP30_S2_Features.xlsx","C:/Users/hesse/Desktop/Code/ASEN5264/AFP30/AFP30_S3_Features.xlsx","C:/Users/hesse/Desktop/Code/ASEN5264/AFP30/AFP30_S4_Features.xlsx","C:/Users/hesse/Desktop/Code/ASEN5264/AFP31/AFP31_S1_Features.xlsx","C:/Users/hesse/Desktop/Code/ASEN5264/AFP31/AFP31_S2_Features.xlsx","C:/Users/hesse/Desktop/Code/ASEN5264/AFP31/AFP31_S3_Features.xlsx","C:/Users/hesse/Desktop/Code/ASEN5264/AFP31/AFP31_S4_Features.xlsx"]
-
 
 data = hf.merge_data(data_files,features)
 
 println("post merge")
 
-input_data,holdout_data = hfn.setup_data_input(data_files,features,0.15)
+input_data,holdout_data = hfn.setup_data_input(data_files,features,0.15,true)
 input_data_x = hfn.get_predictor_data(input_data)
 input_data_y = hfn.get_predictee_data(input_data)
 holdout_data_x = hfn.get_predictor_data(holdout_data)
@@ -41,7 +43,7 @@ holdout_data_y = hfn.get_predictee_data(holdout_data)
 
 println("Post datasetup")
 
-m = Chain(Dense(length(features), 50, relu), Dense(50, 50, relu), Dense(50, 1))
+m = Chain(Dense(length(features), 50, leakyrelu), Dense(50, 50, leakyrelu), Dense(50, 1))
 loss(x, y) = sum((m(x)-y).^2)
 
 println("post m")
@@ -49,12 +51,12 @@ println("post m")
 t = []
 learncurve = []
 numcurve = []
-num_episodes = 50000
+num_episodes = 5000
 
 for i in 1:num_episodes
     Flux.train!(loss, Flux.params(m), input_data, Descent(0.05))
 
-    if i%100 == 0
+    if i%500 == 0
 
         println("Episode: $(i)")
         hfn.visualize_classification_results(m,input_data)
