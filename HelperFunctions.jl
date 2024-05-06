@@ -6,6 +6,9 @@ import Distributions as dists
 import XLSX
 import Statistics
 import Plots as plt
+using Tables
+
+
 
 #get all subject data into one dataframe
 function merge_data(workbooks::Vector{String},features::Vector{Tuple{String,Int}})
@@ -85,6 +88,31 @@ function classify_states(states::Vector{Float64},data::DF.DataFrame)::DF.DataFra
 
 end
 
+# parse trust data and generate a column of "transitions" ie diff between curr trust state and nex
+function trust_transition_parsing(data::DF.DataFrame,states)
+
+
+    #ensure dataframe already has stateindex 
+    try
+        data.StateIndex
+    catch
+        # if isa(exc, ArgumentError)
+            data = classify_states(states,data)
+        # else
+            # error(exc)
+        # end
+    end
+    
+    # data.StateTransition = [0; diff(data.StateIndex)]
+    data.StateTransition = [data.StateIndex[2:length(data.StateIndex)]; 0]
+
+
+
+
+    return data
+
+end
+
 
 # estimate transition probabilities from ground truth state data
 function estimate_transitions(states::Vector{Float64},data::DF.DataFrame)::Matrix{Float64}
@@ -159,6 +187,7 @@ function estimate_transitions(states::Vector{Float64},data::DF.DataFrame)::Matri
     return transitions
 
 end
+
 
 #generate observation distributions for each specifed state using the specified features/physio data
 function estimate_observations(states::Vector{Float64},features::Vector{Tuple{String,Int}},data::DF.DataFrame,flag_covariation::Bool)::Vector{dists.FullNormal}

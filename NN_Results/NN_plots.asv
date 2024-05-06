@@ -1,0 +1,25 @@
+abs_data = readtable("C:\Users\hesse\Desktop\Code\ASEN5264\NN_Results\SummaryTable.xlsx", 'Sheet','Absolute');
+diff_data = readtable("C:\Users\hesse\Desktop\Code\ASEN5264\NN_Results\SummaryTable.xlsx", 'Sheet','Diff');
+close all
+
+figure
+hold on
+plot(abs_data.Error, abs_data.AFP30_Simple_prop_5k, 'r--')
+plot(abs_data.Error, abs_data.AFP30_Full_prop_5k, 'r-')
+
+plot(abs_data.Error, abs_data.AFP30_Simple_prop_5k, 'r--')
+plot(abs_data.Error, abs_data.AFP30_Full_prop_5k, 'r-')
+
+plot(abs_data.Error, abs_data.AFP31_Simple_prop_5k, 'b--')
+plot(abs_data.Error, abs_data.AFP31_Full_prop_5k, 'b-')
+
+plot(abs_data.Error, abs_data.AFP32_Simple_prop_5k, 'g--')
+plot(abs_data.Error, abs_data.AFP32_Full_prop_5k, 'g-')
+
+legend(["AFP30 Simple", "AFP30 Full", "AFP31 Simple", "AFP31 Full"],'Location','southeast')
+xlabel("Prediction Error", "Interpreter","latex","FontSize",12)
+ylabel("Cumulative Proportion", "Interpreter","latex","FontSize",12)
+xticks(0:0.1:1)
+yticks(0:0.1:1)
+grid on
+

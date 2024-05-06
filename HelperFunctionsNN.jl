@@ -9,21 +9,25 @@ import Plots as plt
 include("HelperFunctions.jl")
 import .HelperFunctions as hf
 using StaticArrays
-
+using Tables
 
 
 #create input data for Flux
-function setup_data_input(data,features::Vector{Tuple{String,Int}},holdout_prop::Float64,flag_diff)
+function setup_data_input(data, predictee, features::Vector{Tuple{String,Int}},holdout_prop::Float64)
     # generate dataframe if given a list of files
     if isa(data,Vector{String})
         data = hf.merge_data(data,features)
     end
 
-    # predict delta_trust rather than absolute trust
-    if flag_diff
-        data.Trust_diff = [diff(data.Trust); 0]
-        data.Trust = data.Trust_diff
+    
+    #compute differential trust,
+    data.Trust_diff = [diff(data.Trust); 0]
+    try
+        data[:,predictee]
+    catch exc
+        error("Specified predictee feature $(predictee) does not exist in dataframe")
     end
+
 
     column_headers = Vector{String}()
     #reconfigure features into correct column names
@@ -42,7 +46,7 @@ function setup_data_input(data,features::Vector{Tuple{String,Int}},holdout_prop:
         for j=1:length(column_headers)
             push!(tmp,train_data[i,column_headers[j]])
         end
-        push!(input_data,(tmp,[train_data[i,"Trust"]]))
+        push!(input_data,(tmp,[train_data[i,predictee]]))
     end
 
     holdout_data = Vector{Tuple{Vector{Float32},Vector{Float32}}}()
@@ -51,7 +55,7 @@ function setup_data_input(data,features::Vector{Tuple{String,Int}},holdout_prop:
         for j=1:length(column_headers)
             push!(tmp,test_data[i,column_headers[j]])
         end
-        push!(holdout_data,(tmp,[test_data[i,"Trust"]]))
+        push!(holdout_data,(tmp,[test_data[i,predictee]]))
     end
     return input_data,holdout_data
 
@@ -76,6 +80,8 @@ function get_predictee_data(data::Vector{Tuple{Vector{Float32},Vector{Float32}}}
 
     return predictee_data
 end
+
+
 
 function visualize_classification_results(m,data)
 
@@ -126,7 +132,14 @@ function cummulative_classification_plot(m,data)
 
     end
 
-    p = plt.plot(x,error_cdf,xlabel="Trust Prediction Error",ylabel="Cummulative Proportion")
+    # try
+    # tmp = [x, error_cdf]
+    # CSV.write("FileName1.csv",  Tables.table(tmp), writeheader=false)
+    # catch
+    CSV.write("FileName2.csv",  Tables.table(error_cdf), writeheader=false)
+
+    # end
+    p = plt.plot(x,error_cdf,label="",xlabel="Trust Prediction Error",ylabel="Cummulative Proportion",xticks=0:0.1:1,grid=true, title="Cohort Cumulative Error, Simple Data")
 
     return p
 

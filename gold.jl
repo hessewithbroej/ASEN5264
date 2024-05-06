@@ -32,7 +32,7 @@ trans_guess = [0.8 0.15 0.05; 0.10 0.80 0.10; 0.05 0.1 0.85]
 dists_guess = [dists.Normal(1,5), dists.Normal(1,10), dists.Normal(1,20)]
 
 hmm_guess = hmms.HMM(init_guess, trans_guess, dists_guess)
-hmm_est, llh_evolution = hmms.baum_welch(hmm_guess,data_restricted.gold_price_usd_diff)
+@show hmm_est, llh_evolution = hmms.baum_welch(hmm_guess,data_restricted.gold_price_usd_diff)
 
 println("done")
 
@@ -40,7 +40,7 @@ println("done")
 #use viterbi to characterize most likely states with solved model
 
 colors = ["green", "yellow", "red"]
-labels = ["Low Vol.", "Moderate Vol.", "High Vol."]
+labels = ["Low Vol.", "Med. Vol.", "High Vol."]
 
 best_state_seq, _ = hmms.viterbi(hmm_est,data_restricted.gold_price_usd_diff)
 plt_viterbi = plt.scatter([],[], label="")
